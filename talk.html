@@ -8,7 +8,7 @@
 
         <link rel="stylesheet" href="dist/reset.css">
         <link rel="stylesheet" href="dist/reveal.css">
-        <link rel="stylesheet" href="dist/theme/django.css" id="theme">
+        <link rel="stylesheet" href="dist/theme/black.css" id="theme">
 
         <!-- <link rel="stylesheet" href="css/theme/django.css"> -->
 
@@ -45,55 +45,55 @@
 <section>
     <h2>🤷‍♀️ Why learn this?</h2>
     <ul>
-        <li>Middleware → change cookies, set headers, log requests, ...</li>
-        <li>Test runner → load tests differently, change settings, block HTTP requests, ...</li>
+        <li>HTTP → middleware, view decorators, ...</li>
+        <li>Test runner → block HTTP requests, change settings, ...</li>
     </ul>
 </section>
 
 <section>
     <h2>✅ Emoji Output</h2>
-    <pre><code class="language-console">$ python manage.py test
+<code><pre>$ python manage.py test
 Creating test database for alias 'default'...
 System check identified no issues (0 silenced).
 💥❎❌⏭✅✅✅✳️
 
 ...
 
--------------------------------------------------------------
+---------------------------------------------------------------------
 Ran 8 tests in 0.003s
 
 FAILED (failures=1, errors=1, skipped=1, expected failures=1,
 unexpected successes=1)
-Destroying test database for alias 'default'...</code></pre>
+Destroying test database for alias 'default'...</pre></code>
 </section>
 
 <section>
     <h2>🔍 Dissecting a Test Run</h2>
-    <pre><code class="language-python">from django.test import TestCase
+    <code><pre>from django.test import TestCase
 
 
 class ExampleTests(TestCase):
     def test_one(self):
-        pass</code></pre>
+        pass</pre></code>
 </section>
 
 <section>
     <h2>Run</h2>
-    <pre><code class="language-console">$ python manage.py test
+    <code><pre>$ python manage.py test
 Creating test database for alias 'default'...
 System check identified no issues (0 silenced).
 .
--------------------------------------------------------------
+----------------------------------------------------------------------
 Ran 1 test in 0.001s
 
 OK
-Destroying test database for alias 'default'...</code></pre>
+Destroying test database for alias 'default'...</pre></code>
 </section>
 
 <section>
     <h2>📣 Verbose</h2>
-    <pre><code class="language-console" style="max-height: 600px">$ python manage.py test -v 3
-Creating test database for alias 'default' ('file:memorydb_de
+    <code><pre>$ python manage.py test -v 3
+Creating test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
 Operations to perform:
   Synchronize unmigrated apps: core
   Apply all migrations: (none)
@@ -103,13 +103,13 @@ Synchronizing apps without migrations:
 Running migrations:
   No migrations to apply.
 System check identified no issues (0 silenced).
-test_one (example.tests.test_example.ExampleTests) ... ok
+test_one (example.core.tests.test_example.ExampleTests) ... ok
 
----------------------------------------------------------
+----------------------------------------------------------------------
 Ran 1 test in 0.004s
 
 OK
-Destroying test database for alias 'default' ('file:memorydb_</code></pre>
+Destroying test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...</pre></code>
 </section>
 
 <section>
@@ -130,13 +130,13 @@ Destroying test database for alias 'default' ('file:memorydb_</code></pre>
 
 <section>
     <h2><code>test</code> management command</h2>
-    <pre><code class="language-python">def handle(self, *test_labels, **options):
+    <code><pre>def handle(self, *test_labels, **options):
     TestRunner = get_runner(settings, options['testrunner'])
     ...
     test_runner = TestRunner(**options)
     ...
     failures = test_runner.run_tests(test_labels)
-    ...</code></pre>
+    ...</pre></code>
     <ul>
         <li>Short command, < 100 lines</li>
     </ul>
@@ -144,19 +144,18 @@ Destroying test database for alias 'default' ('file:memorydb_</code></pre>
 
 <section>
     <h2>🔍 <code>DiscoverRunner</code> class</h2>
-    <pre><code class="language-python">class DiscoverRunner:
-    """A Django test runner that uses unittest2 test
-    discovery."""
+    <code><pre>class DiscoverRunner:
+    """A Django test runner that uses unittest2 test discovery."""
 
     test_suite = unittest.TestSuite
     parallel_test_suite = ParallelTestSuite
     test_runner = unittest.TextTestRunner
-    test_loader = unittest.defaultTestLoader</code></pre>
+    test_loader = unittest.defaultTestLoader</pre></code>
 </section>
 
 <section>
-    <h2>🔍 <code>run_tests()</code></h2>
-    <pre><code class="language-python">def run_tests(self, test_labels, extra_tests=None, **kwargs):
+    <h2>🔍 <code>DiscoverRunner.run_tests()</code></h2>
+    <code><pre>def run_tests(self, test_labels, extra_tests=None, **kwargs):
     self.setup_test_environment()
     suite = self.build_suite(test_labels, extra_tests)
     databases = self.get_databases(suite)
@@ -165,12 +164,12 @@ Destroying test database for alias 'default' ('file:memorydb_</code></pre>
     result = self.run_suite(suite)
     self.teardown_databases(old_config)
     self.teardown_test_environment()
-    return self.suite_result(suite, result)</code></pre>
+    return self.suite_result(suite, result)</pre></code>
 </section>
 
 <section>
-    <h2>🔍 <code>build_suite()</code></h2>
-    <pre><code class="language-python">def build_suite(self, test_labels=None, extra_tests=None, **kwargs):
+    <h2>🔍 <code>DiscoverRunner.build_suite()</code></h2>
+    <code><pre>def build_suite(self, test_labels=None, extra_tests=None, **kwargs):
     suite = self.test_suite()
     test_labels = test_labels or ['.']
 
@@ -181,30 +180,35 @@ Destroying test database for alias 'default' ('file:memorydb_</code></pre>
     if self.parallel > 1:
         suite = self.parallel_test_suite(suite, self.parallel, self.failfast)
 
-    return suite</code></pre>
-    <p><code>test_suite</code>, <code>parallel_test_suite</code>, <code>test_loader</code></p>
+    return suite</pre></code>
+    <ul>
+        <li><code>test_suite = unittest.TestSuite</code></li>
+        <li><code>parallel_test_suite = ParallelTestSuite</code></li>
+        <li><code>test_loader = unittest.defaultTestLoader</code></li>
+    </ul>
 </section>
 
 <section>
-    <h2>🔍 <code>run_suite()</code></h2>
-    <pre><code class="language-python">def run_suite(self, suite, **kwargs):
+    <h2>🔍 <code>DiscoverRunner.run_suite()</code></h2>
+    <code><pre>def run_suite(self, suite, **kwargs):
     kwargs = self.get_test_runner_kwargs()
     runner = self.test_runner(**kwargs)
-    return runner.run(suite)</code></pre>
-    <p><code>test_runner</code></p>
+    return runner.run(suite)</pre></code>
+    <ul>
+        <li><code>test_runner = unittest.TextTestRunner</code></li>
+    </ul>
 </section>
 
 <section>
     <h2>🔍 <code>unittest.TextTestRunner</code></h2>
-    <pre><code class="language-python">class TextTestRunner(object):
-    """A test runner class that displays results in textual
-    form. It prints out the names of tests as they are run,
-    errors as they occur, and a summary of the results at the
-    end of the test run.
+    <code><pre>class TextTestRunner(object):
+    """A test runner class that displays results in textual form.
+    It prints out the names of tests as they are run, errors as they
+    occur, and a summary of the results at the end of the test run.
     """
     resultclass = TextTestResult
 
-    def __init__(self, ..., resultclass=None, ...):</code></pre>
+    def __init__(self, ..., resultclass=None, ...):</pre></code>
 </section>
 
 <section>
@@ -222,15 +226,14 @@ Destroying test database for alias 'default' ('file:memorydb_</code></pre>
 <section>
     <h2>🐇 Superfast Runner</h2>
     <ul>
-        <li>Example simplest customization</li>
-        <li>Make tests execute instantly</li>
+        <li>Make tests super fast!</li>
     </ul>
 </section>
 
 <section>
     <h2>🐇 Superfast Runner</h2>
     <p>Custom test runner:</p>
-    <pre><code class="language-python"># example/test.py
+    <code><pre># example/test.py
 from django.test.runner import DiscoverRunner
 
 
@@ -238,20 +241,20 @@ class SuperFastTestRunner(DiscoverRunner):
     def run_tests(self, *args, **kwargs):
         print("All tests passed! A+")
         failures = 0
-        return failures</code></pre>
+        return failures</pre></code>
 </section>
 
 <section>
     <h2>🐇 Superfast Runner</h2>
     <p>Settings file:</p>
-    <pre><code class="language-python">TEST_RUNNER = "example.test.SuperFastTestRunner"</code></pre>
+    <code><pre>TEST_RUNNER = "example.test.SuperFastTestRunner"</pre></code>
 </section>
 
 <section>
     <h2>🐇 Superfast Runner</h2>
     <p>Now very fast:</p>
-    <pre><code class="language-console">$ python manage.py test
-All tests passed! A+</code></pre>
+    <code><pre>$ python manage.py test
+All tests passed! A+</pre></code>
 </section>
 
 <section>
@@ -271,32 +274,31 @@ All tests passed! A+</code></pre>
         🔍 <code>DiscoverRunner</code>
         .<code>get_resultclass()</code>
     </h2>
-    <pre><code class="language-python">def get_resultclass(self):
+    <code><pre>def get_resultclass(self):
     if self.debug_sql:
         return DebugSQLTextTestResult
     elif self.pdb:
-        return PDBDebugResult</code></pre>
+        return PDBDebugResult</pre></code>
     <p>Replace implicit <code>None</code> with our subclass</p>
 </section>
 
 <section>
     <h2>✅ Emoji output</h2>
-    <pre><code class="language-python">class EmojiTestRunner(DiscoverRunner):
+    <code><pre>class EmojiTestRunner(DiscoverRunner):
     def get_resultclass(self):
         klass = super().get_resultclass()
         if klass is None:
             return EmojiTestResult
-        return klass</code></pre>
+        return klass</pre></code>
 </section>
 
 <section>
     <h2>✅ Emoji output</h2>
 
-    <pre><code class="language-python" style="max-height: 500px">class EmojiTestResult(unittest.TextTestResult):
+    <code><pre>class EmojiTestResult(unittest.TextTestResult):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # If the "dots" style was going to be used,
-        # show emoji instead
+        # If the "dots" style was going to be used, show emoji instead
         self.emojis = self.dots
         self.dots = False
 
@@ -306,24 +308,26 @@ All tests passed! A+</code></pre>
             self.stream.write('✅')
             self.stream.flush()
 
-    ... # One method per result type</code></pre>
+    ...</pre></code>
+
+    <p>One method per result type</p>
 </section>
 
 <section>
     <h2>✅ Emoji Output</h2>
-<pre><code class="language-console">$ python manage.py test
+<code><pre>$ python manage.py test
 Creating test database for alias 'default'...
 System check identified no issues (0 silenced).
 💥❎❌⏭✅✅✅✳️
 
 ...
 
--------------------------------------------------------------
+---------------------------------------------------------------------
 Ran 8 tests in 0.003s
 
 FAILED (failures=1, errors=1, skipped=1, expected failures=1,
 unexpected successes=1)
-Destroying test database for alias 'default'...</code></pre>
+Destroying test database for alias 'default'...</pre></code>
 </section>
 
 <section>
@@ -354,7 +358,7 @@ Destroying test database for alias 'default'...</code></pre>
         <li>Adam Johnson</li>
         <li>@adamchainz on GitHub &amp; Twitter</li>
         <li>me@adamj.eu</li>
-        <li><a href="https://github.com/adamchainz/talk-what-happens-when-you-run-manage.py-test">github.com/adamchainz/talk-what-happens-when-you-run-manage.py-test</a></li>
+        <li><a href="https://github.com/adamchainz/talk-django-and-web-security-headers">github.com/adamchainz/talk-django-and-web-security-headers</a></li>
     </ul>
 </section>
 
@@ -362,6 +366,8 @@ Destroying test database for alias 'default'...</code></pre>
         </div>
 
         <script src="dist/reveal.js"></script>
+        <script src="plugin/notes/notes.js"></script>
+        <script src="plugin/markdown/markdown.js"></script>
         <script src="plugin/highlight/highlight.js"></script>
         <script>
             // More info about initialization & config:
@@ -371,7 +377,7 @@ Destroying test database for alias 'default'...</code></pre>
                 hash: true,
 
                 // Learn about plugins: https://revealjs.com/plugins/
-                plugins: [ RevealHighlight ]
+                plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
             });
         </script>
     </body>
