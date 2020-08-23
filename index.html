@@ -1,0 +1,375 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+        <title>What happens when you run manage.py test?</title>
+
+        <link rel="stylesheet" href="css/reveal.css">
+        <link rel="stylesheet" href="css/theme/django.css">
+
+        <!-- Theme used for syntax highlighting of code -->
+        <link rel="stylesheet" href="lib/css/zenburn.css">
+
+        <!-- Printing and PDF exports -->
+        <script>
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = window.location.search.match(/print-pdf/gi) ? 'css/print/pdf.css' : 'css/print/paper.css';
+            document.getElementsByTagName('head')[0].appendChild(link);
+        </script>
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+
+<section>
+    <h1>What happens when you run <code>manage.py test</code>?</h1>
+    <h2>Adam Johnson</h2>
+</section>
+
+<section>
+    <h2>⬛️ A black box?</h2>
+    <ul>
+        <li>You write your tests</li>
+        <li>Test runner runs them</li>
+        <li>How?</li>
+    </ul>
+</section>
+
+<section>
+    <h2>🤷‍♀️ Why learn this?</h2>
+    <ul>
+        <li>HTTP → middleware, view decorators, ...</li>
+        <li>Test runner → block HTTP requests, change settings, ...</li>
+    </ul>
+</section>
+
+<section>
+    <h2>✅ Emoji Output</h2>
+<code><pre>$ python manage.py test
+Creating test database for alias 'default'...
+System check identified no issues (0 silenced).
+💥❎❌⏭✅✅✅✳️
+
+...
+
+---------------------------------------------------------------------
+Ran 8 tests in 0.003s
+
+FAILED (failures=1, errors=1, skipped=1, expected failures=1,
+unexpected successes=1)
+Destroying test database for alias 'default'...</pre></code>
+</section>
+
+<section>
+    <h2>🔍 Dissecting a Test Run</h2>
+    <code><pre>from django.test import TestCase
+
+
+class ExampleTests(TestCase):
+    def test_one(self):
+        pass</pre></code>
+</section>
+
+<section>
+    <h2>Run</h2>
+    <code><pre>$ python manage.py test
+Creating test database for alias 'default'...
+System check identified no issues (0 silenced).
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+OK
+Destroying test database for alias 'default'...</pre></code>
+</section>
+
+<section>
+    <h2>📣 Verbose</h2>
+    <code><pre>$ python manage.py test -v 3
+Creating test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+Operations to perform:
+  Synchronize unmigrated apps: core
+  Apply all migrations: (none)
+Synchronizing apps without migrations:
+  Creating tables...
+    Running deferred SQL...
+Running migrations:
+  No migrations to apply.
+System check identified no issues (0 silenced).
+test_one (example.core.tests.test_example.ExampleTests) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.004s
+
+OK
+Destroying test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...</pre></code>
+</section>
+
+<section>
+    <h2>📋 Process</h2>
+    <ol>
+        <li>Create the test databases.</li>
+        <li>Migrate the databases.</li>
+        <li>Run the system checks.</li>
+        <li>Run the tests.</li>
+        <li>Report on the test count and success/failure.</li>
+        <li>Destroy the test databases.</li>
+    </ol>
+</section>
+
+<section>
+    <img src="img/django-and-unittest.png" class="plain">
+</section>
+
+<section>
+    <h2><code>test</code> management command</h2>
+    <code><pre>def handle(self, *test_labels, **options):
+    TestRunner = get_runner(settings, options['testrunner'])
+    ...
+    test_runner = TestRunner(**options)
+    ...
+    failures = test_runner.run_tests(test_labels)
+    ...</pre></code>
+    <ul>
+        <li>Short command, < 100 lines</li>
+    </ul>
+</section>
+
+<section>
+    <h2>🔍 <code>DiscoverRunner</code> class</h2>
+    <code><pre>class DiscoverRunner:
+    """A Django test runner that uses unittest2 test discovery."""
+
+    test_suite = unittest.TestSuite
+    parallel_test_suite = ParallelTestSuite
+    test_runner = unittest.TextTestRunner
+    test_loader = unittest.defaultTestLoader</pre></code>
+</section>
+
+<section>
+    <h2>🔍 <code>DiscoverRunner.run_tests()</code></h2>
+    <code><pre>def run_tests(self, test_labels, extra_tests=None, **kwargs):
+    self.setup_test_environment()
+    suite = self.build_suite(test_labels, extra_tests)
+    databases = self.get_databases(suite)
+    old_config = self.setup_databases(aliases=databases)
+    self.run_checks(databases)
+    result = self.run_suite(suite)
+    self.teardown_databases(old_config)
+    self.teardown_test_environment()
+    return self.suite_result(suite, result)</pre></code>
+</section>
+
+<section>
+    <h2>🔍 <code>DiscoverRunner.build_suite()</code></h2>
+    <code><pre>def build_suite(self, test_labels=None, extra_tests=None, **kwargs):
+    suite = self.test_suite()
+    test_labels = test_labels or ['.']
+
+    for label in test_labels:
+        tests = self.test_loader.loadTestsFromName(label)
+        suite.addTests(tests)
+
+    if self.parallel > 1:
+        suite = self.parallel_test_suite(suite, self.parallel, self.failfast)
+
+    return suite</pre></code>
+    <ul>
+        <li><code>test_suite = unittest.TestSuite</code></li>
+        <li><code>parallel_test_suite = ParallelTestSuite</code></li>
+        <li><code>test_loader = unittest.defaultTestLoader</code></li>
+    </ul>
+</section>
+
+<section>
+    <h2>🔍 <code>DiscoverRunner.run_suite()</code></h2>
+    <code><pre>def run_suite(self, suite, **kwargs):
+    kwargs = self.get_test_runner_kwargs()
+    runner = self.test_runner(**kwargs)
+    return runner.run(suite)</pre></code>
+    <ul>
+        <li><code>test_runner = unittest.TextTestRunner</code></li>
+    </ul>
+</section>
+
+<section>
+    <h2>🔍 <code>unittest.TextTestRunner</code></h2>
+    <code><pre>class TextTestRunner(object):
+    """A test runner class that displays results in textual form.
+    It prints out the names of tests as they are run, errors as they
+    occur, and a summary of the results at the end of the test run.
+    """
+    resultclass = TextTestResult
+
+    def __init__(self, ..., resultclass=None, ...):</pre></code>
+</section>
+
+<section>
+    <img src="img/components.png" class="plain">
+</section>
+
+<section>
+    <h2>✌️ Two ways to customize</h2>
+    <ul>
+        <li>Override <code>test</code> management command</li>
+        <li>Override <code>DiscoverRunner</code> with the <code>TEST_RUNNER</code> setting</li>
+    </ul>
+</section>
+
+<section>
+    <h2>🐇 Superfast Runner</h2>
+    <ul>
+        <li>Make tests super fast!</li>
+    </ul>
+</section>
+
+<section>
+    <h2>🐇 Superfast Runner</h2>
+    <p>Custom test runner:</p>
+    <code><pre># example/test.py
+from django.test.runner import DiscoverRunner
+
+
+class SuperFastTestRunner(DiscoverRunner):
+    def run_tests(self, *args, **kwargs):
+        print("All tests passed! A+")
+        failures = 0
+        return failures</pre></code>
+</section>
+
+<section>
+    <h2>🐇 Superfast Runner</h2>
+    <p>Settings file:</p>
+    <code><pre>TEST_RUNNER = "example.test.SuperFastTestRunner"</pre></code>
+</section>
+
+<section>
+    <h2>🐇 Superfast Runner</h2>
+    <p>Now very fast:</p>
+    <code><pre>$ python manage.py test
+All tests passed! A+</pre></code>
+</section>
+
+<section>
+    <h2>✅ Emoji Output</h2>
+    <ul>
+        <li>Override <code>DiscoverRunner</code> with custom subclass</li>
+        <li>Override the <code>TextTestResult</code> class used with a custom subclass</li>
+    </ul>
+</section>
+
+<section>
+    <img src="img/components.png" class="plain">
+</section>
+
+<section>
+    <h2>
+        🔍 <code>DiscoverRunner</code>
+        .<code>get_resultclass()</code>
+    </h2>
+    <code><pre>def get_resultclass(self):
+    if self.debug_sql:
+        return DebugSQLTextTestResult
+    elif self.pdb:
+        return PDBDebugResult</pre></code>
+    <p>Replace implicit <code>None</code> with our subclass</p>
+</section>
+
+<section>
+    <h2>✅ Emoji output</h2>
+    <code><pre>class EmojiTestRunner(DiscoverRunner):
+    def get_resultclass(self):
+        klass = super().get_resultclass()
+        if klass is None:
+            return EmojiTestResult
+        return klass</pre></code>
+</section>
+
+<section>
+    <h2>✅ Emoji output</h2>
+
+    <code><pre>class EmojiTestResult(unittest.TextTestResult):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # If the "dots" style was going to be used, show emoji instead
+        self.emojis = self.dots
+        self.dots = False
+
+    def addSuccess(self, test):
+        super().addSuccess(test)
+        if self.emojis:
+            self.stream.write('✅')
+            self.stream.flush()
+
+    ...</pre></code>
+
+    <p>One method per result type</p>
+</section>
+
+<section>
+    <h2>✅ Emoji Output</h2>
+<code><pre>$ python manage.py test
+Creating test database for alias 'default'...
+System check identified no issues (0 silenced).
+💥❎❌⏭✅✅✅✳️
+
+...
+
+---------------------------------------------------------------------
+Ran 8 tests in 0.003s
+
+FAILED (failures=1, errors=1, skipped=1, expected failures=1,
+unexpected successes=1)
+Destroying test database for alias 'default'...</pre></code>
+</section>
+
+<section>
+    <h2>🥞 No Composition</h2>
+    <ul>
+        <li>Classes-referring-to-classes simple enough</li>
+        <li>“Dependency injection”</li>
+        <li>Not composable = no plugins</li>
+        <li>Two extensions:</li>
+        <ul>
+            <li>unittest-xml-reporting</li>
+            <li>django-slow-tests</li>
+        </ul>
+    </ul>
+</section>
+
+<section>
+    <h2>🧪 pytest</h2>
+    <ul>
+        <li>Composition with hooks</li>
+        <li>Over 700 plugins</li>
+    </ul>
+</section>
+
+<section>
+    <h1>Thank you! 🤗</h1>
+    <ul>
+        <li>Adam Johnson</li>
+        <li>@adamchainz on GitHub &amp; Twitter</li>
+        <li>me@adamj.eu</li>
+        <li><a href="https://github.com/adamchainz/talk-django-and-web-security-headers">github.com/adamchainz/talk-django-and-web-security-headers</a></li>
+    </ul>
+</section>
+
+            </div>
+        </div>
+
+        <script src="lib/js/head.min.js"></script>
+        <script src="js/reveal.js"></script>
+
+        <script>
+            // More info https://github.com/hakimel/reveal.js#configuration
+            Reveal.initialize({
+                history: true,
+            });
+        </script>
+    </body>
+</html>
