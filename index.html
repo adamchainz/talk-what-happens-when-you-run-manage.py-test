@@ -170,7 +170,8 @@ Destroying test database for alias 'default' ('file:memorydb_</code></pre>
 
 <section>
     <h2>🔍 <code>build_suite()</code></h2>
-    <pre><code class="language-python">def build_suite(self, test_labels=None, extra_tests=None, **kwargs):
+    <pre><code class="language-python">def build_suite(self, test_labels=None, extra_tests=None,
+                **kwargs):
     suite = self.test_suite()
     test_labels = test_labels or ['.']
 
@@ -179,7 +180,7 @@ Destroying test database for alias 'default' ('file:memorydb_</code></pre>
         suite.addTests(tests)
 
     if self.parallel > 1:
-        suite = self.parallel_test_suite(suite, self.parallel, self.failfast)
+        suite = self.parallel_test_suite(suite, ...)
 
     return suite</code></pre>
     <p><code>test_suite</code>, <code>parallel_test_suite</code>, <code>test_loader</code></p>
@@ -269,6 +270,20 @@ All tests passed! A+</code></pre>
 <section>
     <h2>
         🔍 <code>DiscoverRunner</code>
+        .<code>get_test_runner_kwargs()</code>
+    </h2>
+    <pre><code class="language-python">def get_test_runner_kwargs(self):
+    return {
+        'failfast': self.failfast,
+        'resultclass': self.get_resultclass(),
+        'verbosity': self.verbosity,
+        'buffer': self.buffer,
+    }</code></pre>
+</section>
+
+<section>
+    <h2>
+        🔍 <code>DiscoverRunner</code>
         .<code>get_resultclass()</code>
     </h2>
     <pre><code class="language-python">def get_resultclass(self):
@@ -329,8 +344,14 @@ Destroying test database for alias 'default'...</code></pre>
 <section>
     <h2>🥞 No Composition</h2>
     <ul>
-        <li>Classes-referring-to-classes simple enough</li>
-        <li>“Dependency injection”</li>
+        <li>Classes-referring-to-classes simple but limited</li>
+        <li>Debug SQL or PDB alongside Emoji?</li>
+    </ul>
+</section>
+
+<section>
+    <h2>🥞 No Composition</h2>
+    <ul>
         <li>Not composable = no plugins</li>
         <li>Two extensions:</li>
         <ul>
